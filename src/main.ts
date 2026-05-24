@@ -2,6 +2,7 @@ import { Game } from './game/Game';
 import { Renderer } from './ui/Renderer';
 import { InputHandler } from './ui/InputHandler';
 import { DifficultyPanel } from './ui/DifficultyPanel';
+import { ThemeManager } from './ui/themes/themes';
 import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT } from './config/constants';
 import { OBSTACLE_CELLS } from './config/difficulty';
 
@@ -30,6 +31,25 @@ input.register();
 // 난이도 패널 마운트 (DOM 요소가 있을 때만)
 const diffPanel = new DifficultyPanel(game, 'difficulty-panel');
 diffPanel.mount();
+
+// 테마 전환 버튼 연결 (DOM 요소가 있을 때만)
+// 버튼 id: "theme-dark", "theme-light"
+const themeDarkBtn = document.getElementById('theme-dark');
+const themeLightBtn = document.getElementById('theme-light');
+
+if (themeDarkBtn) {
+  themeDarkBtn.addEventListener('click', () => {
+    ThemeManager.setTheme('dark');
+    renderer.setPalette(ThemeManager.getActivePalette());
+  });
+}
+
+if (themeLightBtn) {
+  themeLightBtn.addEventListener('click', () => {
+    ThemeManager.setTheme('light');
+    renderer.setPalette(ThemeManager.getActivePalette());
+  });
+}
 
 // requestAnimationFrame 기반 고정 틱 루프
 // game.tickInterval을 매 프레임 읽어 동적 난이도 변경을 반영한다

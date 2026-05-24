@@ -1,33 +1,43 @@
 import { Game } from '../game/Game';
 import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT } from '../config/constants';
-
-/** 색상 팔레트 */
-const COLOR_BG = '#1a1a2e';
-const COLOR_GRID = '#16213e';
-const COLOR_SNAKE_HEAD = '#4ecca3';
-const COLOR_SNAKE_BODY = '#3a9b7e';
-const COLOR_FOOD = '#e94560';
-/** 장애물 색상 — 강철 회색 계열로 위협감 표현 */
-const COLOR_OBSTACLE = '#7f8c8d';
-const COLOR_OBSTACLE_BORDER = '#566573';
-const COLOR_TEXT = '#e0e0e0';
-const COLOR_GAMEOVER = 'rgba(0,0,0,0.6)';
+import type { Palette } from './themes/themes';
+import { darkPalette } from './themes/dark';
 
 /**
  * Game 상태를 Canvas에 렌더링한다.
  * Canvas 2D 컨텍스트는 생성자를 통해 주입받아 테스트 시 목(mock)으로 대체 가능하다.
+ *
+ * 팔레트(색상 테마)도 생성자를 통해 주입 가능하며, setPalette()로 런타임 전환된다.
+ * 테마 코드는 게임 상태를 읽거나 변경하지 않는다 — 렌더링 전용.
+ *
+ * @MX:ANCHOR: [AUTO] Renderer.setPalette — 테마 전환의 렌더러 측 진입점
+ * @MX:REASON: main.ts의 테마 버튼 핸들러, ThemeManager, 테스트가 모두 이 메서드를 호출한다.
+ *             팔레트 교체는 다음 render() 호출 시 즉시 반영된다.
  */
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private game: Game;
   private canvasWidth: number;
   private canvasHeight: number;
+  /** 현재 활성 팔레트 — 기본값은 dark */
+  private palette: Palette;
 
-  constructor(ctx: CanvasRenderingContext2D, game: Game) {
+  constructor(ctx: CanvasRenderingContext2D, game: Game, palette?: Palette) {
     this.ctx = ctx;
     this.game = game;
     this.canvasWidth = GRID_WIDTH * CELL_SIZE;
     this.canvasHeight = GRID_HEIGHT * CELL_SIZE;
+    // 팔레트 미지정 시 dark 팔레트를 기본값으로 사용한다
+    this.palette = palette ?? darkPalette;
+  }
+
+  /**
+   * 활성 팔레트를 교체한다.
+   * 다음 render() 호출 시 새 팔레트가 적용된다.
+   * 게임 상태(snake, food, score)는 변경되지 않는다.
+   */
+  setPalette(palette: Palette): void {
+    this.palette = palette;
   }
 
   /** 한 프레임을 렌더링한다 */
@@ -47,11 +57,11 @@ export class Renderer {
 
   /** 게임판 배경을 그린다 */
   private drawBackground(): void {
-    this.ctx.fillStyle = COLOR_BG;
+    this.ctx.fillStyle = this.palette.bg;
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
     // 그리드 선 (선택적)
-    this.ctx.fillStyle = COLOR_GRID;
+    this.ctx.fillStyle = this.palette.grid;
     for (let y = 0; y < GRID_HEIGHT; y++) {
       for (let x = 0; x < GRID_WIDTH; x++) {
         if ((x + y) % 2 === 1) {
@@ -70,7 +80,7 @@ export class Renderer {
   private drawObstacles(): void {
     for (const obs of this.game.obstacles) {
       // 배경 채우기
-      this.ctx.fillStyle = COLOR_OBSTACLE;
+      this.ctx.fillStyle = this.palette.obstacle;
       this.ctx.fillRect(
         obs.x * CELL_SIZE,
         obs.y * CELL_SIZE,
@@ -78,7 +88,7 @@ export class Renderer {
         CELL_SIZE,
       );
       // 테두리로 입체감 표현
-      this.ctx.fillStyle = COLOR_OBSTACLE_BORDER;
+      this.ctx.fillStyle = this.palette.obstacleBorder;
       this.ctx.fillRect(obs.x * CELL_SIZE + 1, obs.y * CELL_SIZE + 1, 2, CELL_SIZE - 2);
       this.ctx.fillRect(obs.x * CELL_SIZE + 1, obs.y * CELL_SIZE + 1, CELL_SIZE - 2, 2);
     }
@@ -88,7 +98,7 @@ export class Renderer {
   private drawFood(): void {
     const fp = this.game.food.position;
     if (fp === null) return;
-    this.ctx.fillStyle = COLOR_FOOD;
+    this.ctx.fillStyle = this.palette.food;
     this.ctx.fillRect(
       fp.x * CELL_SIZE + 2,
       fp.y * CELL_SIZE + 2,
@@ -101,7 +111,7 @@ export class Renderer {
   private drawSnake(): void {
     const segments = this.game.snake.occupied();
     segments.forEach((seg, idx) => {
-      this.ctx.fillStyle = idx === 0 ? COLOR_SNAKE_HEAD : COLOR_SNAKE_BODY;
+      this.ctx.fillStyle = idx === 0 ? this.palette.snakeHead : this.palette.snakeBody;
       this.ctx.fillRect(
         seg.x * CELL_SIZE + 1,
         seg.y * CELL_SIZE + 1,
@@ -113,7 +123,7 @@ export class Renderer {
 
   /** 점수를 Canvas 위에 텍스트로 그린다 */
   private drawScore(): void {
-    this.ctx.fillStyle = COLOR_TEXT;
+    this.ctx.fillStyle = this.palette.text;
     this.ctx.font = '14px monospace';
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`SCORE: ${this.game.score}`, 6, 18);
@@ -121,9 +131,9 @@ export class Renderer {
 
   /** 게임 오버 오버레이를 그린다 */
   private drawGameOver(): void {
-    this.ctx.fillStyle = COLOR_GAMEOVER;
+    this.ctx.fillStyle = this.palette.gameoverOverlay;
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-    this.ctx.fillStyle = COLOR_TEXT;
+    this.ctx.fillStyle = this.palette.text;
     this.ctx.font = 'bold 28px monospace';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('GAME OVER', this.canvasWidth / 2, this.canvasHeight / 2);
@@ -137,9 +147,9 @@ export class Renderer {
 
   /** 시작 대기 오버레이를 그린다 */
   private drawReady(): void {
-    this.ctx.fillStyle = COLOR_GAMEOVER;
+    this.ctx.fillStyle = this.palette.gameoverOverlay;
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-    this.ctx.fillStyle = COLOR_TEXT;
+    this.ctx.fillStyle = this.palette.text;
     this.ctx.font = 'bold 24px monospace';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('SNAKE', this.canvasWidth / 2, this.canvasHeight / 2 - 20);
