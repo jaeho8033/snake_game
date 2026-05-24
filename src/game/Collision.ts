@@ -4,8 +4,8 @@ import { Position, positionEquals } from './types';
  * 충돌 판정 순수 함수 모음.
  * DOM/Canvas 의존성 없음 — 결정론적 단위 테스트 가능.
  *
- * @MX:ANCHOR: [AUTO] checkWallCollision / checkSelfCollision / checkFoodEaten
- * @MX:REASON: Game.tick()이 세 함수의 반환값으로 게임 종료/성장 분기를 결정한다.
+ * @MX:ANCHOR: [AUTO] checkWallCollision / checkSelfCollision / checkFoodEaten / checkObstacleCollision
+ * @MX:REASON: Game.tick()이 네 함수의 반환값으로 게임 종료/성장 분기를 결정한다.
  *             이 함수들의 계약이 변경되면 게임 오버/성장 로직 전체에 영향을 미친다.
  */
 
@@ -49,4 +49,18 @@ export function checkFoodEaten(
 ): boolean {
   if (foodPos === null) return false;
   return positionEquals(head, foodPos);
+}
+
+/**
+ * 장애물 충돌 여부를 반환한다.
+ * 벽/자체 충돌과 동일한 단일 충돌 경로에서 사용된다.
+ *
+ * @param pos - 검사할 위치 (다음 머리)
+ * @param obstacles - 장애물 위치 배열
+ */
+export function checkObstacleCollision(
+  pos: Position,
+  obstacles: Position[],
+): boolean {
+  return obstacles.some((o) => positionEquals(o, pos));
 }

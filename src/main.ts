@@ -1,7 +1,9 @@
 import { Game } from './game/Game';
 import { Renderer } from './ui/Renderer';
 import { InputHandler } from './ui/InputHandler';
-import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, TICK_MS } from './config/constants';
+import { DifficultyPanel } from './ui/DifficultyPanel';
+import { CELL_SIZE, GRID_WIDTH, GRID_HEIGHT } from './config/constants';
+import { OBSTACLE_CELLS } from './config/difficulty';
 
 // Canvas 초기화
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -14,13 +16,23 @@ if (!ctx) throw new Error('Canvas 2D context 를 가져올 수 없습니다');
 // 점수 표시 DOM 요소
 const scoreEl = document.getElementById('score-value');
 
-// 게임 인스턴스 생성
-const game = new Game(Math.random);
+// 장애물 모드 활성화 여부 결정 (URL 파라미터 ?obstacles=true 또는 기본 활성)
+const urlParams = new URLSearchParams(window.location.search);
+const obstacleMode = urlParams.get('obstacles') !== 'false';
+const obstacles = obstacleMode ? OBSTACLE_CELLS : [];
+
+// 게임 인스턴스 생성 (장애물 포함)
+const game = new Game(Math.random, { obstacles });
 const renderer = new Renderer(ctx, game);
 const input = new InputHandler(game);
 input.register();
 
+// 난이도 패널 마운트 (DOM 요소가 있을 때만)
+const diffPanel = new DifficultyPanel(game, 'difficulty-panel');
+diffPanel.mount();
+
 // requestAnimationFrame 기반 고정 틱 루프
+// game.tickInterval을 매 프레임 읽어 동적 난이도 변경을 반영한다
 let lastTime = 0;
 let accumulator = 0;
 
@@ -29,10 +41,10 @@ function loop(timestamp: number): void {
   lastTime = timestamp;
   accumulator += dt;
 
-  // 고정 틱 주기마다 game.tick() 호출
-  while (accumulator >= TICK_MS) {
+  // game.tickInterval을 매 프레임 조회 — 난이도 변경 시 즉시 반영
+  while (accumulator >= game.tickInterval) {
     game.tick();
-    accumulator -= TICK_MS;
+    accumulator -= game.tickInterval;
   }
 
   // 매 프레임 렌더링

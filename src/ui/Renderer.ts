@@ -7,6 +7,9 @@ const COLOR_GRID = '#16213e';
 const COLOR_SNAKE_HEAD = '#4ecca3';
 const COLOR_SNAKE_BODY = '#3a9b7e';
 const COLOR_FOOD = '#e94560';
+/** 장애물 색상 — 강철 회색 계열로 위협감 표현 */
+const COLOR_OBSTACLE = '#7f8c8d';
+const COLOR_OBSTACLE_BORDER = '#566573';
 const COLOR_TEXT = '#e0e0e0';
 const COLOR_GAMEOVER = 'rgba(0,0,0,0.6)';
 
@@ -30,6 +33,7 @@ export class Renderer {
   /** 한 프레임을 렌더링한다 */
   render(): void {
     this.drawBackground();
+    this.drawObstacles();
     this.drawFood();
     this.drawSnake();
     this.drawScore();
@@ -59,6 +63,24 @@ export class Renderer {
           );
         }
       }
+    }
+  }
+
+  /** 장애물 셀을 그린다 (뱀/음식과 구별되는 색상) */
+  private drawObstacles(): void {
+    for (const obs of this.game.obstacles) {
+      // 배경 채우기
+      this.ctx.fillStyle = COLOR_OBSTACLE;
+      this.ctx.fillRect(
+        obs.x * CELL_SIZE,
+        obs.y * CELL_SIZE,
+        CELL_SIZE,
+        CELL_SIZE,
+      );
+      // 테두리로 입체감 표현
+      this.ctx.fillStyle = COLOR_OBSTACLE_BORDER;
+      this.ctx.fillRect(obs.x * CELL_SIZE + 1, obs.y * CELL_SIZE + 1, 2, CELL_SIZE - 2);
+      this.ctx.fillRect(obs.x * CELL_SIZE + 1, obs.y * CELL_SIZE + 1, CELL_SIZE - 2, 2);
     }
   }
 
