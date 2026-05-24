@@ -27,13 +27,13 @@ snake-game/
 │   │   └── types.ts         # 공유 타입 정의 (Position, Direction 등)
 │   │
 │   ├── ui/                  # 사용자 인터페이스 모듈
-│   │   ├── Renderer.ts      # Canvas 렌더링 및 그리기 (장애물 렌더링 포함)
+│   │   ├── Renderer.ts      # Canvas 렌더링 및 그리기 (장애물 렌더링 포함, 팔레트 주입)
 │   │   ├── InputHandler.ts  # 키보드/터치 입력 처리
 │   │   ├── DifficultyPanel.ts # 난이도 선택 UI 컴포넌트 [SPEC-GAME-002]
-│   │   ├── themes/          # 색상 테마 저장소 (미구현)
-│   │   │   ├── light.ts     # 라이트 테마 설정
-│   │   │   ├── dark.ts      # 다크 테마 설정
-│   │   │   └── themes.ts    # 테마 매니저
+│   │   ├── themes/          # 색상 테마 저장소 [SPEC-GAME-003]
+│   │   │   ├── light.ts     # 라이트 테마 팔레트
+│   │   │   ├── dark.ts      # 다크 테마 팔레트
+│   │   │   └── themes.ts    # Palette 타입 정의 및 테마 관리
 │   │   └── GamePanel.ts     # 점수 및 상태 UI 컴포넌트
 │   │
 │   └── config/              # 설정 및 상수
@@ -54,7 +54,8 @@ snake-game/
 │   ├── ui/
 │   │   ├── InputHandler.test.ts # 입력 처리 테스트
 │   │   ├── Renderer.test.ts     # 렌더링 테스트
-│   │   └── DifficultyPanel.test.ts # 난이도 선택 UI 테스트 [SPEC-GAME-002]
+│   │   ├── DifficultyPanel.test.ts # 난이도 선택 UI 테스트 [SPEC-GAME-002]
+│   │   └── Theme.test.ts        # 색상 테마 적용 및 로직-렌더링 불변식 테스트 [SPEC-GAME-003]
 │   │
 │   ├── integration/         # 통합 테스트
 │   │   └── GameFlow.test.ts # 전체 게임 플로우 테스트
@@ -92,10 +93,13 @@ snake-game/
 #### `src/ui/` - 사용자 인터페이스 모듈
 렌더링, 입력 처리, UI 컴포넌트:
 
-- **Renderer.ts**: Canvas API를 이용한 게임 화면 그리기 (SPEC-GAME-002에서 장애물 렌더링 추가)
+- **Renderer.ts**: Canvas API를 이용한 게임 화면 그리기 (SPEC-GAME-002에서 장애물 렌더링, SPEC-GAME-003에서 팔레트 주입 추가)
 - **InputHandler.ts**: 키보드 이벤트 및 터치 입력 처리
 - **DifficultyPanel.ts**: 난이도 선택 UI [SPEC-GAME-002]
-- **themes/**: 색상 테마 관리 (라이트/다크 모드 등) — 미구현
+- **themes/**: 색상 테마 관리 (라이트/다크 모드) [SPEC-GAME-003] — 완전 구현
+  - **themes.ts**: Palette 인터페이스, ThemeManager 클래스
+  - **dark.ts**: 다크 테마 팔레트 정의 (기본값)
+  - **light.ts**: 라이트 테마 팔레트 정의
 - **GamePanel.ts**: 점수 표시, 게임 상태 표시
 
 #### `src/config/` - 설정 및 상수
@@ -172,8 +176,8 @@ TypeScript의 강타입을 활용하여 런타임 오류를 최소화합니다.
 
 - **난이도 시스템** [SPEC-GAME-002 구현]: `config/difficulty.ts`에 난이도 프로필 정의 → `Game.ts`에서 tickInterval 제어 (추가 난이도 추가 시 difficulty.ts 확장)
 - **장애물 모드** [SPEC-GAME-002 구현]: `GameOptions.obstacles`로 고정 장애물 주입 → `Collision.ts`와 `Renderer.ts`에서 처리 (동적/움직이는 장애물은 SPEC-GAME-002 범위 외)
-- **테마 시스템** [계획]: `ui/themes/` 디렉토리에 새로운 테마 파일 추가 → `Renderer.ts`에서 선택된 테마 적용 (SPEC-GAME-003)
+- **테마 시스템** [SPEC-GAME-003 구현]: `ui/themes/` 디렉토리에 새로운 테마 파일(Palette 상수) 추가 → `Renderer.setPalette()`로 적용 (추가 테마 추가 시 dark.ts/light.ts와 유사한 팔레트 파일 추가)
 
 ---
 
-**문서 최종 확인 날짜**: 2026-05-25 (SPEC-GAME-002 sync 반영)
+**문서 최종 확인 날짜**: 2026-05-25 (SPEC-GAME-003 sync 반영)
