@@ -91,65 +91,81 @@ describe('장애물(Obstacle) 시스템', () => {
   });
 
   describe('AC-OBS-2: 음식 생성 시 장애물/뱀 위치 제외', () => {
-    it('음식 재생성 위치는 장애물 셀이 아니다', () => {
-      // Arrange: 장애물이 거의 모든 셀을 차지하도록 구성
-      // 결정론적 rng(fixedRng=0)으로 첫 번째 빈 셀이 선택되는 것을 검증
+    it('음식 재생성 위치는 장애물 셀도, 뱀 세그먼트도 아니다 (후보 공간 전체 검증)', () => {
+      // Arrange: x=0 열의 (0,0)~(0,18)을 장애물로 채워 빈 셀 후보를 제한한다.
+      // fixedRng=0이면 free[] 첫 번째 원소 선택 → 첫 원소가 장애물/뱀이면 테스트가 실패해야 함.
       const obstacles: Position[] = [];
-      // (0,0)~(0,18) 모두 장애물로 채움 — (0,19)와 다른 셀은 남김
       for (let y = 0; y <= 18; y++) {
         obstacles.push({ x: 0, y });
       }
-
-      const game = new Game(fixedRng, {
-        segments: [
-          { x: 5, y: 5 },
-          { x: 4, y: 5 },
-          { x: 3, y: 5 },
-        ],
-        direction: DIR_RIGHT,
-        foodPosition: { x: 5, y: 6 }, // 먹으면 재생성 트리거
-        obstacles,
-      });
-      game.start();
-
-      // Act: 음식 섭취 후 재생성 트리거
-      // 머리(5,5) → 오른쪽(6,5): 음식과 다름
-      // 음식이 (5,6)에 있으므로 아래로 방향 변경 후 먹어야 함
-      // 다른 접근: 직접 food.position을 머리 바로 앞으로 설정하고 tick
-      game.food.position = { x: 6, y: 5 };
-      game.tick(); // 음식 섭취 → 재생성
-
-      // Assert: 재생성된 음식이 장애물 위치가 아님
-      const fp = game.food.position;
-      if (fp !== null) {
-        const isOnObstacle = obstacles.some(
-          (o) => o.x === fp.x && o.y === fp.y,
-        );
-        expect(isOnObstacle).toBe(false);
-      }
-    });
-
-    it('음식 재생성 위치는 뱀 세그먼트와 겹치지 않는다', () => {
-      // Arrange: 간단한 장애물 + 뱀 배치
+      // 뱀: 머리(5,5), (4,5), (3,5) — 오른쪽 방향
+      // 음식을 머리 바로 앞(6,5)에 배치해 다음 tick에서 즉시 섭취되도록 함
       const game = new Game(fixedRng, {
         segments: [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }],
         direction: DIR_RIGHT,
         foodPosition: { x: 6, y: 5 },
-        obstacles: [{ x: 7, y: 5 }],
+        obstacles,
+      });
+      game.start();
+
+      // Act: tick() → 음식 섭취 → food.spawn() 호출됨
+      game.tick();
+
+      // Assert 1: 재생성된 음식이 반드시 존재해야 한다 (빈 셀 있음)
+      expect(game.food.position).not.toBeNull();
+
+      const fp = game.food.position!;
+
+      // Assert 2: 장애물 위치가 아니어야 한다
+      const isOnObstacle = obstacles.some((o) => o.x === fp.x && o.y === fp.y);
+      expect(isOnObstacle).toBe(false);
+
+      // Assert 3: 뱀 세그먼트 위치도 아니어야 한다 (tick 후 성장한 상태)
+      const snakeSegs = game.snake.occupied();
+      const isOnSnake = snakeSegs.some((s) => s.x === fp.x && s.y === fp.y);
+      expect(isOnSnake).toBe(false);
+
+      // Assert 4: 생성된 위치가 실제 빈 셀 후보 집합에 속하는지 검증
+      // (필터 로직 회귀 방지 — 장애물 또는 뱀 위에 음식이 배치되면 이 집합에 없음)
+      const occupiedSet = new Set(
+        [...snakeSegs, ...obstacles].map((p) => `${p.x},${p.y}`),
+      );
+      expect(occupiedSet.has(`${fp.x},${fp.y}`)).toBe(false);
+    });
+
+    it('음식 재생성 위치는 장애물도, 뱀 세그먼트도 동시에 배제된다 (두 조건 모두 검증)', () => {
+      // Arrange: 장애물과 뱀이 혼재한 상황에서 양쪽 모두 제외되는지 검증
+      // 장애물: (7,5) — 음식 먹은 직후 뱀이 (6,5)로 이동하고 (3,5)~(6,5) 점유
+      // 빈 셀은 보드 전체에서 뱀(4셀) + 장애물(1셀)을 뺀 나머지
+      const obstacles: Position[] = [{ x: 7, y: 5 }];
+      const game = new Game(fixedRng, {
+        segments: [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }],
+        direction: DIR_RIGHT,
+        foodPosition: { x: 6, y: 5 },
+        obstacles,
       });
       game.start();
       game.tick(); // 음식 섭취 → 재생성
 
-      const fp = game.food.position;
-      // 뱀 세그먼트와 겹치지 않아야 함
-      if (fp !== null) {
-        // 뱀이 성장했으므로 머리가 (6,5)로 이동
-        const snakeSegs = game.snake.occupied();
-        const isOnSnake = snakeSegs.some(
-          (s) => s.x === fp.x && s.y === fp.y,
-        );
-        expect(isOnSnake).toBe(false);
-      }
+      // Assert 1: 음식이 생성되어 있어야 한다
+      expect(game.food.position).not.toBeNull();
+
+      const fp = game.food.position!;
+      const snakeSegs = game.snake.occupied(); // 성장 후: (6,5),(5,5),(4,5),(3,5)
+
+      // Assert 2: 장애물 위치 아님
+      const isOnObstacle = obstacles.some((o) => o.x === fp.x && o.y === fp.y);
+      expect(isOnObstacle).toBe(false);
+
+      // Assert 3: 뱀 세그먼트 위치 아님
+      const isOnSnake = snakeSegs.some((s) => s.x === fp.x && s.y === fp.y);
+      expect(isOnSnake).toBe(false);
+
+      // Assert 4: occupied 합집합 기반 후보 집합 검증 (필터 회귀 방지)
+      const occupiedSet = new Set(
+        [...snakeSegs, ...obstacles].map((p) => `${p.x},${p.y}`),
+      );
+      expect(occupiedSet.has(`${fp.x},${fp.y}`)).toBe(false);
     });
   });
 
