@@ -27,31 +27,34 @@ snake-game/
 │   │   └── types.ts         # 공유 타입 정의 (Position, Direction 등)
 │   │
 │   ├── ui/                  # 사용자 인터페이스 모듈
-│   │   ├── Renderer.ts      # Canvas 렌더링 및 그리기
+│   │   ├── Renderer.ts      # Canvas 렌더링 및 그리기 (장애물 렌더링 포함)
 │   │   ├── InputHandler.ts  # 키보드/터치 입력 처리
-│   │   ├── themes/          # 색상 테마 저장소
+│   │   ├── DifficultyPanel.ts # 난이도 선택 UI 컴포넌트 [SPEC-GAME-002]
+│   │   ├── themes/          # 색상 테마 저장소 (미구현)
 │   │   │   ├── light.ts     # 라이트 테마 설정
 │   │   │   ├── dark.ts      # 다크 테마 설정
 │   │   │   └── themes.ts    # 테마 매니저
-│   │   ├── DifficultyPanel.ts # 난이도 선택 UI 컴포넌트
 │   │   └── GamePanel.ts     # 점수 및 상태 UI 컴포넌트
 │   │
 │   └── config/              # 설정 및 상수
 │       ├── constants.ts      # 게임 상수 (보드 크기, 기본 속도)
-│       ├── difficulty.ts     # 난이도 설정 프로필
+│       ├── difficulty.ts     # 난이도 설정 프로필 [SPEC-GAME-002]
 │       └── defaults.ts       # 기본값 설정
 │
 ├── tests/                   # 단위 및 통합 테스트
 │   ├── game/
 │   │   ├── Snake.test.ts    # 뱀 로직 테스트
 │   │   ├── Food.test.ts     # 음식 생성 테스트
-│   │   ├── Collision.test.ts # 충돌 감지 테스트
+│   │   ├── Collision.test.ts # 충돌 감지 테스트 (장애물 충돌 포함)
 │   │   ├── Score.test.ts    # 점수 계산 테스트
-│   │   └── Game.test.ts     # 게임 상태 머신 테스트
+│   │   ├── Game.test.ts     # 게임 상태 머신 테스트
+│   │   ├── Difficulty.test.ts # 난이도 설정 및 적용 테스트 [SPEC-GAME-002]
+│   │   └── Obstacle.test.ts  # 장애물 충돌/음식 생성/초기 배치 테스트 [SPEC-GAME-002]
 │   │
 │   ├── ui/
 │   │   ├── InputHandler.test.ts # 입력 처리 테스트
-│   │   └── Renderer.test.ts     # 렌더링 테스트
+│   │   ├── Renderer.test.ts     # 렌더링 테스트
+│   │   └── DifficultyPanel.test.ts # 난이도 선택 UI 테스트 [SPEC-GAME-002]
 │   │
 │   ├── integration/         # 통합 테스트
 │   │   └── GameFlow.test.ts # 전체 게임 플로우 테스트
@@ -79,21 +82,20 @@ snake-game/
 #### `src/game/` - 게임 로직 모듈
 게임의 핵심 기능을 담당하는 순수 로직 모듈들:
 
-- **Board.ts**: 게임판 상태(크기, 셀 좌표), 장애물 위치 관리
 - **Snake.ts**: 뱀의 신체 세그먼트, 이동 방향, 이동 로직
 - **Food.ts**: 음식의 현재 위치, 랜덤 생성 알고리즘
-- **Collision.ts**: 벽 충돌, 자체 충돌, 음식 섭취 감지
+- **Collision.ts**: 벽 충돌, 자체 충돌, 음식 섭취 감지 (SPEC-GAME-002에서 장애물 충돌 추가)
 - **Score.ts**: 점수 계산, 난이도별 점수 배정
-- **Game.ts**: 게임 루프, 상태 관리 (실행 중/일시정지/게임 오버)
+- **Game.ts**: 게임 루프, 상태 관리 (실행 중/일시정지/게임 오버), 틱 주기 제어 [SPEC-GAME-002]
 - **types.ts**: 공유 인터페이스 (Position, Direction, GameState 등)
 
 #### `src/ui/` - 사용자 인터페이스 모듈
 렌더링, 입력 처리, UI 컴포넌트:
 
-- **Renderer.ts**: Canvas API를 이용한 게임 화면 그리기
+- **Renderer.ts**: Canvas API를 이용한 게임 화면 그리기 (SPEC-GAME-002에서 장애물 렌더링 추가)
 - **InputHandler.ts**: 키보드 이벤트 및 터치 입력 처리
-- **themes/**: 색상 테마 관리 (라이트/다크 모드 등)
-- **DifficultyPanel.ts**: 난이도 선택 UI
+- **DifficultyPanel.ts**: 난이도 선택 UI [SPEC-GAME-002]
+- **themes/**: 색상 테마 관리 (라이트/다크 모드 등) — 미구현
 - **GamePanel.ts**: 점수 표시, 게임 상태 표시
 
 #### `src/config/` - 설정 및 상수
@@ -168,10 +170,10 @@ TypeScript의 강타입을 활용하여 런타임 오류를 최소화합니다.
 
 ## 확장성 고려사항
 
-- **장애물 추가**: `Board.ts`에 장애물 배열 추가 → `Collision.ts`에 장애물 충돌 로직 추가
-- **난이도 시스템**: `config/difficulty.ts`에 난이도 프로필 추가 → `Game.ts`에서 난이도별 속도 적용
-- **테마 시스템**: `ui/themes/` 디렉토리에 새로운 테마 파일 추가 → `Renderer.ts`에서 선택된 테마 적용
+- **난이도 시스템** [SPEC-GAME-002 구현]: `config/difficulty.ts`에 난이도 프로필 정의 → `Game.ts`에서 tickInterval 제어 (추가 난이도 추가 시 difficulty.ts 확장)
+- **장애물 모드** [SPEC-GAME-002 구현]: `GameOptions.obstacles`로 고정 장애물 주입 → `Collision.ts`와 `Renderer.ts`에서 처리 (동적/움직이는 장애물은 SPEC-GAME-002 범위 외)
+- **테마 시스템** [계획]: `ui/themes/` 디렉토리에 새로운 테마 파일 추가 → `Renderer.ts`에서 선택된 테마 적용 (SPEC-GAME-003)
 
 ---
 
-**문서 최종 확인 날짜**: 2026-05-24
+**문서 최종 확인 날짜**: 2026-05-25 (SPEC-GAME-002 sync 반영)

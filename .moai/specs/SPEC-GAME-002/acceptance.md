@@ -64,9 +64,9 @@ Given-When-Then 형식의 인수 시나리오. 각 요구사항 모듈당 최소
 
 ## Definition of Done
 
-- [ ] REQ-EXT-001 모든 인수 시나리오 통과
-- [ ] REQ-EXT-002 모든 인수 시나리오 통과
-- [ ] 신규 파일 4개 생성(difficulty.ts, DifficultyPanel.ts, Difficulty.test.ts, Obstacle.test.ts)
-- [ ] 수정 파일에서 SPEC-GAME-001 동작 회귀 없음
-- [ ] Exclusions 항목(동적 난이도/움직이는 장애물/색상 테마/코어 재구현) 미구현 확인
-- [ ] 커버리지 목표 달성, lint 통과
+- [x] REQ-EXT-001 모든 인수 시나리오 통과
+- [x] REQ-EXT-002 모든 인수 시나리오 통과
+- [x] 신규 파일 5개 생성(difficulty.ts, DifficultyPanel.ts, Difficulty.test.ts, Obstacle.test.ts, DifficultyPanel.test.ts)
+- [x] 수정 파일에서 SPEC-GAME-001 동작 회귀 없음
+- [x] Exclusions 항목(동적 난이도/움직이는 장애물/색상 테마/코어 재구현) 미구현 확인
+- [x] 커버리지 목표 달성, lint 통과

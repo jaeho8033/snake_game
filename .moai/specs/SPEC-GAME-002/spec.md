@@ -1,7 +1,7 @@
 ---
 id: SPEC-GAME-002
-version: 0.1.0
-status: draft
+version: 1.0.0
+status: completed
 created: 2026-05-25
 updated: 2026-05-25
 author: yna
@@ -14,6 +14,7 @@ issue_number: 0
 ## HISTORY
 
 - 2026-05-25: 최초 작성 (draft). SPEC-GAME-001(플레이 가능한 스네이크 MVP) 위에 쌓이는 확장 SPEC. SPEC-GAME-001은 아직 구현되지 않았으므로 delta 마커 없음(기존 코드 없음). 색상 테마는 별도 SPEC(SPEC-GAME-003) 소관으로 본 SPEC 범위에서 제외. author: yna.
+- 2026-05-25: TDD 구현 완료 및 sync. status `draft` → `completed`, version 0.1.0 → 1.0.0. 전체 116개 테스트 통과(SPEC-GAME-001 81개 + SPEC-GAME-002 35개), 타입 오류 0, 커버리지 97.86%(게임 코어 99.61%). 신규 파일 5개(difficulty.ts, DifficultyPanel.ts, Difficulty.test.ts, Obstacle.test.ts, DifficultyPanel.test.ts) 생성, 수정 파일 4개(Game.ts, Collision.ts, Renderer.ts, main.ts). 계획 대비 변동: (1) 틱 주기가 main.ts 루프의 고정 상수가 아닌 Game.tickInterval로 변경되어 Game 클래스에서 동적 제어 가능; Board.ts는 미생성(게임판 모듈 불필요, Collision만 확장); (2) 장애물은 GameOptions.obstacles로 주입되며 Game이 저장/관리; (3) 장애물 충돌은 checkObstacleCollision으로 벽/자체 충돌과 단일 규칙으로 통합. author: yna.
 
 ---
 
@@ -100,3 +101,81 @@ SPEC-GAME-001에서 정의한 플레이 가능한 스네이크 MVP에 두 가지
 - 프로덕션 의존성: 없음(zero). 개발 의존성만 사용(vite, vitest, typescript).
 - 개발 방법론: TDD (RED-GREEN-REFACTOR), 커버리지 목표 85% 이상(게임 코어 95% 이상 권장).
 - 통합 제약: 장애물 충돌은 SPEC-GAME-001의 벽/자체 충돌과 단일 충돌 규칙으로 통합하며, 별도 게임 오버 경로를 만들지 않는다.
+
+---
+
+## Implementation Notes (구현 노트)
+
+2026-05-25 sync 시점 기준, 본 SPEC은 TDD(RED-GREEN-REFACTOR)로 완전히 구현되었으며 모든 인수 기준과 품질 게이트를 충족했다.
+
+### 구현 결과 요약
+
+| 항목 | 목표 | 실제 결과 |
+|------|------|-----------|
+| 단위/통합 테스트 | 전체 AC 자동화 통과 | 116/116 통과 (11개 테스트 파일: SPEC-GAME-001 8개 + SPEC-GAME-002 신규 3개) |
+| TypeScript strict | 타입 오류 0 | 0 (`tsc --noEmit`) |
+| 커버리지 | 전체 85%+, 코어 95%+ | 전체 97.86%, 게임 코어 99.61%, DifficultyPanel.ts 100% |
+| SPEC-GAME-001 회귀 | 기존 기능 유지 | 81개 기존 테스트 모두 통과, 기존 기능 훼손 없음 |
+| Exclusions | 범위 외 기능 미포함 | 준수 (동적 난이도/움직이는 장애물/색상 테마/코어 재구현 부재 확인) |
+
+### 신규 파일 및 수정 파일
+
+**신규 파일** (5개):
+- `src/config/difficulty.ts` — 난이도 프로필(낮음/중간/높음) 정의, 각 프로필의 틱 주기값
+- `src/ui/DifficultyPanel.ts` — 난이도 선택 UI 컴포넌트
+- `tests/game/Difficulty.test.ts` — 난이도 설정 및 적용 검증 (AC-DIFF-1~3)
+- `tests/game/Obstacle.test.ts` — 장애물 충돌/음식 생성/초기 배치 검증 (AC-OBS-1~3)
+- `tests/ui/DifficultyPanel.test.ts` — DifficultyPanel UI 렌더링 및 이벤트 검증
+
+**수정 파일** (4개):
+- `src/game/Game.ts` — `tickInterval` / `pendingTickInterval` 필드 추가, 틱 주기 동적 제어, 난이도 적용 로직 통합
+- `src/game/Collision.ts` — `checkObstacleCollision` 메서드 추가, 벽/자체/장애물 충돌을 단일 통합 규칙으로 처리
+- `src/ui/Renderer.ts` — 장애물 셀 렌더링 로직 추가 (`drawObstacles`)
+- `src/main.ts` — 난이도 선택 UI 초기화 및 이벤트 핸들러 등록
+
+### 계획 대비 변동 및 설계 결정
+
+#### 변동 1: 틱 주기 관리 위치
+**계획**: `main.ts` 루프에서 `TICK_MS` 상수로 틱 주기 제어  
+**실제**: Game 클래스가 `tickInterval` (현재 적용 중) + `pendingTickInterval` (다음 재시작부터 적용) 필드 보유
+
+**근거**:
+- `playing` 중 난이도 변경 시 현재 게임 영향 없이 다음 재시작부터 적용하는 REQ-EXT-001 "Unwanted behaviour" 구현 필요
+- Game이 틱 주기를 소유하면 난이도 변경 로직 (`setDifficulty` 메서드)이 Game 내부에 응집됨
+- main.ts는 단순히 `game.tickInterval` 값을 읽어 루프 간격으로 사용 (설정/관리 불필요)
+
+#### 변동 2: Board.ts 미생성
+**계획**: `src/game/Board.ts` (게임판 상태 및 렌더링)  
+**실제**: Board.ts 미생성 (SPEC-GAME-001에서도 미생성)
+
+**근거**:
+- SPEC-GAME-001 설계에서 Board 모듈은 사용되지 않음
+- 게임판 크기, 셀 좌표 관리는 `Game.ts` 및 `Collision.ts`에서 직접 처리 (높은 응집도)
+- 장애물도 `GameOptions.obstacles` (좌표 배열)로 주입되어 Board 추상화 불필요
+- 기존 구조 유지로 복잡도 최소화
+
+#### 변동 3: 장애물 소유권
+**계획**: 장애물 셀 집합을 `src/config/` 또는 `Board.ts`에 저장  
+**실제**: 장애물은 `GameOptions.obstacles` 필드로 Game에 주입되며, Game이 저장
+
+**근거**:
+- 테스트 결정성: 각 테스트에서 다른 장애물 배치로 테스트 가능 (config 의존성 제거)
+- Food.spawn()의 "빈 셀" 정의에 장애물 포함 필요 → Game이 점유 셀 집합 전체(뱀 + 장애물) 관리하면 일관성 유지
+- Collision 로직도 Game이 보유한 장애물 집합에 대해 checkObstacleCollision 실행
+
+### 요구사항 → 구현 매핑
+
+- REQ-EXT-001 (난이도/속도 제어): `src/config/difficulty.ts`, `src/game/Game.ts` (tickInterval/pendingTickInterval, setDifficulty) — 검증: `tests/game/Difficulty.test.ts` (AC-DIFF-1~3)
+- REQ-EXT-002 (벽 장애물): `src/game/Collision.ts` (checkObstacleCollision), `src/game/Game.ts` (obstacles 저장), `src/ui/Renderer.ts` (drawObstacles) — 검증: `tests/game/Obstacle.test.ts` (AC-OBS-1~3)
+
+### @MX 태그
+
+- ANCHOR(REASON 포함): `Game.tick`, `Game.setDifficulty`, `Collision.checkObstacleCollision`, `Food.spawn`
+- NOTE: 난이도 변경 펜딩 로직, 장애물 충돌 통합 규칙, 틱 주기 동적 제어
+- WARN: 장애물 충돌 감지 복잡도 (>=15 라인, 벽/자체/장애물 조건 통합)
+
+### SPEC-GAME-001과의 호환성 검증
+
+- SPEC-GAME-001의 인수 기준 (AC-SCORE, AC-SELF, AC-WALL, AC-RENDER 등) 전부 통과 (회귀 0)
+- 기존 게임 루프/뱀 이동/음식 생성 로직 변경 없음 (확장만 수행)
+- 난이도/장애물 비활성화 시 SPEC-GAME-001 MVP와 동일한 동작 보장
